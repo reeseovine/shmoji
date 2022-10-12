@@ -6,28 +6,28 @@ demo: https://asciinema.org/a/525695
 
 
 $ shmoji -h
-usage: [download | bemenu | rofi | fzf]
+usage: shmoji [download | bemenu | rofi | fzf] [print | type | copy] [picker_parameters...]
 
 examples:
   # download emojis
   shmoji download
 
-  # launch shmoji with bemenu
+  # launch shmoji with bemenu and type the emoji (default action for gui pickers)
   shmoji bemenu
 
-  # launch shmoji with rofi
-  shmoji rofi
+  # launch shmoji with rofi (with a custom prompt) and copy the emoji to clipboard
+  shmoji rofi copy -p '🛸'
 
-  # launch shmoji with fzf
+  # launch shmoji with fzf and print the emoji (default action for console)
   shmoji fzf
 
 
 how do i use this in...
 sway:
-  bindsym $mod+Shift+o exec --no-startup-id shmoji bemenu
+  bindsym $mod+Shift+e exec shmoji bemenu
 
 i3:
-  bindsym $mod+Shift+o exec --no-startup-id shmoji rofi
+  bindsym $mod+Shift+e exec --no-startup-id shmoji rofi -p '🛸'
 
 shell:
   shmoji fzf

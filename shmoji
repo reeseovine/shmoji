@@ -1,21 +1,25 @@
 #!/bin/sh
 #
 # shell-based emoji picker
-#
-# deps by command:
-# - shmoji download: curl
-# - shmoji fzf: fzf
-# - shmoji bemenu: bemenu & wtype
-# - shmoji rofi: rofi & xdotool
 
 set -e
 
-cmd="$1"
+picker="$1"; shift
+
+actions=(print type copy)
+pickers_gui=(bemenu rofi)
+action="print"
+if echo "${actions[@]}" | grep -wq -- "$1"; then
+	action="$1"; shift
+elif echo "${pickers_gui[@]}" | grep -wq "$picker"; then
+	action="type"
+fi
+
 emojidir="$HOME/.cache/shmoji"
 emojifile="$emojidir/emojis.txt"
 
 die() {
-    printf "%s\n" "$1"
+    [ "$1" ] && printf "%s\n" "$1"
     exit 1
 }
 
@@ -29,40 +33,60 @@ emojicheck() {
     [ -f "$emojifile" ] || die "emojis not found. try 'shmoji download'"
 }
 
-emojiprint() {
-    printf "%s" "$1" | cut -d " " -f 1 | tr -d '\n'
+emojipipe() {
+    cat | cut -d " " -f 1 | tr -d '\n'
 }
 
-case "$cmd" in
+emoji=""
+case "$picker" in
     download)
         depends curl
         mkdir -p "$emojidir"
-        # $ wc -l /var/www/trash.j3s.sh/emojis.txt 
-        # 3570 /var/www/trash.j3s.sh/emojis.txt
         curl 'https://trash.j3s.sh/emojis.txt' >"$emojifile"
+        exit 0
         ;;
     bemenu)
         emojicheck
-        depends bemenu wtype
-        emoji=$(cat "$emojifile" | bemenu -c -W 0.2 -l 20)
-        emojiprint "$emoji" | wtype -
+        depends bemenu
+        emoji=$(cat "$emojifile" | bemenu -c -W 0.2 -l 20 $@ | emojipipe)
         ;;
     rofi)
         emojicheck
-        depends rofi xdotool
-        win=$(xdotool getactivewindow)
-        emoji=$(cat "$emojifile" | rofi -dmenu | cut -d " " -f 1 | tr -d '\n')
-        [ "$emoji" ] && xdotool windowactivate --sync $win type --clearmodifiers $emoji
+        depends rofi
+        emoji=$(cat "$emojifile" | rofi -dmenu $@ | emojipipe)
         ;;
     fzf)
         emojicheck
         depends fzf
-        emoji=$(cat "$emojifile" | fzf)
-        emojiprint "$emoji"
+        emoji=$(cat "$emojifile" | fzf $@ | emojipipe)
         ;;
     *)
-        printf "%s\n" "usage: shmoji [download | bemenu | rofi | fzf]"
+        die "usage: shmoji [download | bemenu | rofi | fzf] [print | type | copy] [picker_parameters...]"
         ;;
 esac
 
-exit 0
+case "$action" in
+	type)
+		if [ "$WAYLAND_DISPLAY" ] && command -v wtype > /dev/null; then
+			wtype "$emoji"
+		elif command -v xdotool > /dev/null; then
+			xdotool type --clearmodifiers "$emoji"
+		else
+			die "no valid typer (wtype, xdotool) was found"
+		fi
+		;;
+	copy)
+		if [ "$WAYLAND_DISPLAY" ] && command -v wl-copy > /dev/null; then
+			wl-copy "$emoji"
+		elif command -v xsel > /dev/null; then
+			printf "%s" "$emoji" | xsel -ib
+		elif command -v xclip > /dev/null; then
+			printf "%s" "$emoji" | xclip -selection clipboard
+		else
+			die "no valid clipboarder (wl-copy, xsel, xclip) was found"
+		fi
+		;;
+	*)
+		printf "%s" "$emoji"
+		;;
+esac
