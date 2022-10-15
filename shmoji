@@ -4,14 +4,14 @@
 
 set -e
 
-picker="$1"; shift
+picker="$1"
 
-actions=(print type copy)
-pickers_gui=(bemenu rofi)
+actions="print type copy"
+pickers_gui="bemenu rofi"
 action="print"
-if echo "${actions[@]}" | grep -wq -- "$1"; then
-	action="$1"; shift
-elif echo "${pickers_gui[@]}" | grep -wq "$picker"; then
+if [ "$2" ] && echo "$actions" | grep -wq -- "$2"; then
+	action="$2"
+elif echo "$pickers_gui" | grep -wq "$picker"; then
 	action="type"
 fi
 
@@ -48,17 +48,17 @@ case "$picker" in
     bemenu)
         emojicheck
         depends bemenu
-        emoji=$(cat "$emojifile" | bemenu -c -W 0.2 -l 20 $@ | emojipipe)
+        emoji=$(cat "$emojifile" | bemenu -c -W 0.2 -l 20 "$@" | emojipipe)
         ;;
     rofi)
         emojicheck
         depends rofi
-        emoji=$(cat "$emojifile" | rofi -dmenu $@ | emojipipe)
+        emoji=$(cat "$emojifile" | rofi -dmenu "$@" | emojipipe)
         ;;
     fzf)
         emojicheck
         depends fzf
-        emoji=$(cat "$emojifile" | fzf $@ | emojipipe)
+        emoji=$(cat "$emojifile" | fzf "$@" | emojipipe)
         ;;
     *)
         die "usage: shmoji [download | bemenu | rofi | fzf] [print | type | copy] [picker_parameters...]"
